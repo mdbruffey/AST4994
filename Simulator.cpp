@@ -29,7 +29,7 @@ typedef struct col {
 	int size;
 } col;
 
-typedef col* colrow;
+typedef col** colrow;
 typedef colrow* vol;
 
 void initialize_0(col*, double eta, double theta, double tau);
@@ -43,6 +43,8 @@ int main()
 	int size = 0;
 	double tau = 0;
 	double eta_rate = 0;
+	int cellcount = 1;
+	int numloops = 1;
 	
 	col* column;
 	vol cube;
@@ -57,8 +59,9 @@ int main()
 	cout << "0: Single column with uniform eta, theta and tau\n";
 	cout << "1: Single column with uniform eta, and tau, but random theta\n";
 	cout << "2: Single column with uniform theta and tau, but varying (linear) eta\n";
-	cout << "3: Cube with custom settings\n";
-	cout << "4: Exit\n";
+	cout << "3: Loop over 1,2,3,4 and 5 cells with random theta\n";
+	cout << "4: Cube with custom settings\n";
+	cout << "5: Exit\n";
 	cout << "Selection: ";
 	cin >> option;
 	
@@ -140,7 +143,48 @@ int main()
 			delete[] column->cells;
 			delete column;
 			break;
-		case 3:  //Cube with custom settings
+			
+		case 3:  //Loop over specified range of cells with random thetas
+			cout << "\nRange of cells to test: 1-";
+			cin >> cellcount;
+			cout << "\nNumber of trials to average: ";
+			cin >> numloops;
+			cout << "\nEnter tau for each cell: ";
+			cin >> tau;
+			cout << "\nEnter eta: ";
+			cin >> eta;
+			
+			double* results;
+			results = new double[cellcount];
+			col** columns;
+			columns = new col*[cellcount];
+			
+			double Psum;
+			
+			for(int i = 0; i < cellcount; i++)
+			{
+				Psum = 0;
+				columns[i] = new col;
+				columns[i]->size = i+1;
+				for(int j = 0; j < numloops; j++)
+				{
+					columns[i]->cells = new cell[i+1];
+					initialize_1(columns[i], eta, theta, tau, eta_rate, 1);
+					simulate_cl(columns[i]);
+					Psum += columns[i]->P;
+					delete[] columns[i]->cells;
+				}
+				results[i] = Psum / numloops;
+				cout << i+1 << " cells: " << results[i] << endl;
+			}
+			for(int i = 0; i < cellcount; i++)
+			{
+				delete columns[i];
+			}
+			delete[] columns;
+			break;
+		
+		case 4:  //Cube with "not" custom settings, lol
 			
 			cout << "\nWidth of Cube: ";
 			cin >> width;
@@ -148,13 +192,40 @@ int main()
 			cin >> height;
 			cout << "\nLength of cube (number of cells): ";
 			cin >> size;
+			cout << "\nEnter theta: ";
+			cin >> theta;
+			cout << "\nEnter tau: ";
+			cin >> tau;
+			cout << "\nEnter eta: ";
+			cin >> eta;
 			cube = new colrow[height];
 			for(int i = 0; i < height; i++)
-				cube[i] = new col[width];
-			
-			//delete[] cube;
+			{
+				cube[i] = new col*[width];
+				for(int j = 0; j < width; j++)
+				{
+					cube[i][j] = new col;
+					cube[i][j]->size = size;
+					cube[i][j]->cells = new cell[size];
+					initialize_0(cube[i][j], eta, theta, tau);
+					simulate_cl(cube[i][j]);
+				}
+			}
+			cout << "Do something with the data" << endl;
+			//clean up
+			for(int i = 0; i < height; i++)
+			{
+				for(int j = 0; j < width; j++)
+				{
+					delete[] cube[i][j]->cells;
+					delete cube[i][j];
+				}
+				delete[] cube[i];
+			}
+			delete[] cube;
 			break;
-		case 4:; //Exit
+			
+		case 5:; //Exit
 	}	
 
 	return 0;
